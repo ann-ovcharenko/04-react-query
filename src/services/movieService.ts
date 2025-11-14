@@ -1,53 +1,36 @@
 import axios from "axios";
-import { type Movie } from "../types/movie.ts";
+import { type MovieResponse } from "../types/movie";
 
 const TMDB_TOKEN = import.meta.env.VITE_TMDB_TOKEN;
 
-const BASE_URL = "https://api.themoviedb.org/3";
-
-interface MoviesResponse {
-  results: Movie[];
-  page: number;
-  total_pages: number;
-  total_results: number;
+if (!TMDB_TOKEN) {
+  throw new Error("VITE_TMDB_TOKEN is not set in environment variables.");
 }
+const instance = axios.create({
+  baseURL: "https://api.themoviedb.org/3/",
+  headers: {
+    Authorization: `Bearer ${TMDB_TOKEN}`,
+  },
+});
 
-export async function fetchMovies(query: string = ""): Promise<Movie[]> {
-  if (!TMDB_TOKEN) {
-    console.error(
-      "TMDB Token is missing. Please set VITE_TMDB_TOKEN in your .env file."
-    );
-    return [];
-  }
-
-  const endpoint = query ? "/search/movie" : "/movie/popular";
-
-  const config = {
-    params: {
-      language: "uk-UA",
-      ...(query && { query: query }),
-    },
-    headers: {
-      Authorization: `Bearer ${TMDB_TOKEN}`,
-    },
-  };
-
+export const fetchMovies = async (
+  query: string,
+  page: number = 1
+): Promise<MovieResponse> => {
   try {
-    const response = await axios.get<MoviesResponse>(
-      `${BASE_URL}${endpoint}`,
-      config
-    );
+    const endpoint = query ? "search/movie" : "trending/movie/day";
 
-    return response.data.results;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        `Помилка отримання фільмів: ${error.response?.status} - ${error.message}`,
-        error.response?.data
-      );
-    } else {
-      console.error("Невідома помилка при отриманні фільмів:", error);
+    const params: { query?: string; page: number } = { page };
+
+    if (query) {
+      params.query = query;
     }
-    return [];
+
+    const { data } = await instance.get<MovieResponse>(endpoint, { params });
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching movies:", error);
+    throw new Error("Не вдалося завантажити фільми з TMDB.");
   }
-}
+};
