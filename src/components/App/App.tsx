@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import ReactPaginate from "react-paginate";
-import { type Movie, type MovieResponse } from "../../types/movie";
-import { fetchMovies } from "../../services/movieService";
+import { type Movie } from "../../types/movie";
+import { fetchMovies, type MovieResponse } from "../../services/movieService";
 import MovieGrid from "../MovieGrid/MovieGrid";
 import Loader from "../Loader/Loader";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
@@ -23,12 +23,14 @@ const App = () => {
   >({
     queryKey: ["movies", searchQuery, page],
     queryFn: () => fetchMovies(searchQuery, page),
+    enabled: searchQuery.length > 0,
+    placeholderData: keepPreviousData,
   });
   useEffect(() => {
     if (isError && error) {
-      toast.error(`Критична помилка запиту: ${error.message}`);
+      const errorMessage = (error as Error).message;
+      toast.error(`Критична помилка запиту: ${errorMessage}`);
     }
-
     if (!isError && data && data.results.length === 0 && searchQuery !== "") {
       toast.error("No movies found for your request.");
     }
